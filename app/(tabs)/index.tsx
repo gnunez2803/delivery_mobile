@@ -1,74 +1,116 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import { useNavigation } from 'expo-router';
+import { View, StyleSheet } from 'react-native';
+import  MapView, { Marker, Region } from 'react-native-maps';
+import React, { useEffect, useState } from 'react';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+interface MarkerData {
+  latlng: {
+    latitude: number;
+    longitude: number;
+  };
+  title: string,
+  description: string,
+  id: number,
+}
 
-export default function HomeScreen() {
+interface State {
+  region: Region;
+  markers: MarkerData[];
+}
+
+type RootStackParamList = {
+  delivery: MarkerData;
+}
+
+export default function Home() {
+  const navigation = useNavigation();
+  const [region, setRegion] = useState<Region>({
+    latitude: 30.266666,
+    longitude: -97.73333,
+    latitudeDelta: 0.222,
+    longitudeDelta: 0.422,
+  });
+
+  const [markers, setMarkers] = useState<MarkerData[]>([]);
+
+  useEffect(() => {
+    navigation.setOptions({ headerShown: false });
+    const unsubscribe = navigation.addListener('focus', () => {
+      // Re-fetch delivery data when the screen is focused
+      fetchMarkers();
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
+  const fetchMarkers = async () => {
+    try {
+      const response = await fetch('http://192.168.1.165:8000/deliveries');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch markers: ${response.status}`);
+      }
+      const data = await response.json();
+
+      // Map the API response to your MarkerData interface
+      const mappedMarkers = data.map((item: any) => ({
+        latlng: {
+          latitude: item.latitude,
+          longitude: item.longtitude,
+        },
+        title: `Delivery #${item.id}`,
+        description: `Status: ${item.status}, Packages: ${item.number_of_packages}`, // A simple description
+        id: item.id, // or use another unique identifier if available
+      }));
+      console.log("fetch markers");
+      console.log(mappedMarkers);
+      setMarkers(mappedMarkers); // Set the mapped markers to state
+    } catch (err: any) {
+      console.log("error")
+      console.error(err.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchMarkers();
+  }, []);
+  
+  const handleRegionChange = (newRegion: Region) => {
+    console.log("handle region change")
+    console.log(newRegion);
+    setRegion(newRegion);
+  };
+
+  const onMarkerCalloutPress = (marker: MarkerData) => {
+    navigation.navigate("delivery", marker);
+  }
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <View style={styles.container}>
+      <MapView
+        style={styles.map}
+        initialRegion={region}
+        onRegionChangeComplete={handleRegionChange}>
+        {
+          markers.map((marker, index) => (
+            <Marker
+              key={index}
+              coordinate={marker.latlng}
+              title={marker.title}
+              description={marker.description}
+              onCalloutPress={() => onMarkerCalloutPress(marker)}
+            />
+          ))
+        }
+      </MapView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  map: {
+    width: '100%',
+    height: '100%',
   },
 });
