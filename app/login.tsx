@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigation } from 'expo-router';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import BackendClient from '../../api/config';
+import BackendClient from '../api/config';
 
-export default function Home() {
+export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);

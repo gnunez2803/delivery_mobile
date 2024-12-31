@@ -4,11 +4,18 @@ import { useEffect, useState } from 'react';
 import Slider from '@react-native-community/slider';
 import { useFonts } from 'expo-font'; 
 import { OpenSans_400Regular } from '@expo-google-fonts/open-sans';
+import { Colors } from '@/constants/Colors';
+import * as SecureStore from 'expo-secure-store';
+import BackendClient from '@/api/config';
 
 interface Package {
   size: string;
   id: number;
   status: string;
+}
+
+interface Delivery {
+  status: string,
 }
 
 export default function DeliveryAction() {
@@ -25,19 +32,9 @@ export default function DeliveryAction() {
   useEffect(() => {
     const fetchPackages = async () => {
       try {
-        const response = await fetch(`http://192.168.1.165:8000/deliveries/${deliveryData.id}/packages`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch packages: ${response.status}`);
-        }
-        const data = await response.json();
-
-        const packages = data.map((item: any) => ({
-          size: item.size,
-          id: item.id,
-          status: item.status,
-        }));
-        setPackages(packages);
-        setAllDelivered(data.every((pkg: Package) => pkg.status === 'delivered'));
+        const backendClient = BackendClient.getInstance();
+        const response = await backendClient.get<any>(`deliveries/${deliveryData.id}/packages`);
+        setPackages(response);
       } catch (err: any) {
         console.error(err.message);
         setError('Failed to load packages');
@@ -57,19 +54,11 @@ export default function DeliveryAction() {
   const handleToggleDeliveryStatus = async (packageId: number, currentStatus: string) => {
     try {
       const newStatus = currentStatus === 'delivered' ? 'incomplete' : 'delivered';
-      const response = await fetch(`http://192.168.1.165:8000/deliveries/${deliveryData.id}/packages/${packageId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: newStatus,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to update package ${packageId}: ${response.status}`);
-      }
+      const updatedPackage: Package = {
+        status: newStatus,
+      };
+      const backendClient = BackendClient.getInstance()
+      const response = await backendClient.put<Package, Package>(`/deliveries/${deliveryData.id}/packages/${packageId}`, updatedPackage);
 
       setPackages((prevPackages) =>
         prevPackages?.map((pkg) =>
@@ -84,10 +73,18 @@ export default function DeliveryAction() {
 
   const handleCompleteDelivery = async () => {
     try {
+      const token = await SecureStore.getItemAsync("token");
+      console.log(token);
+      const updatedDelivery: Delivery = {
+        status: "completed",
+      };
+      const backendClient = BackendClient.getInstance()
+      backendClient.put<Delivery, Delivery>(`/deliveries/${deliveryData.id}`, updatedDelivery )
       const response = await fetch(`http://192.168.1.165:8000/deliveries/${deliveryData.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': token,
         },
         body: JSON.stringify({
           status: 'completed',
@@ -160,6 +157,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    backgroundColor: Colors.light.background,
   },
   packageItem: {
     padding: 16,

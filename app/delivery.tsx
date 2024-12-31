@@ -1,6 +1,8 @@
 import { View, Text, StyleSheet, Button, Linking, Platform } from 'react-native';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { Colors } from '@/constants/Colors';
+import BackendClient from '@/api/config';
 
 // Define the data structure for delivery information
 interface DeliveryData {
@@ -41,7 +43,7 @@ export default function Delivery() {
   // useEffect with dependency on navigation state
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      // Re-fetch delivery data when the screen is focused
+      // Re-fetch to update delivery data when the screen is focused
       fetchDeliveryData();
     });
 
@@ -78,42 +80,30 @@ export default function Delivery() {
     if (data.status == "completed") {
       return;
     } else {
-      return <Button title='Start Delivery' onPress={() => buttonDelivery(data)}/>
+      return (
+        <View style={styles.deliveryButton}>
+          <Button color="green" title='Start Dropoff Now' onPress={() => buttonDelivery(data)}/>
+        </View>
+      );
     }
   };
 
   const fetchDeliveryData = async () => {
     try {
-      const response = await fetch(`http://192.168.1.165:8000/deliveries/${marker.id}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch data: ${response.status}`);
-      }
-      const deliveryResponse = await response.json();
-      setDeliveryData(deliveryResponse);
+      const backendClient = BackendClient.getInstance();
+      const response = await backendClient.get<DeliveryData>(`/deliveries/${marker.id}`);
+      setDeliveryData(response);
 
-      if (deliveryResponse.business_id) {
-        const businessResponse = await fetch(`http://192.168.1.165:8000/business/${deliveryResponse.business_id}`);
-        if (!businessResponse.ok) {
-          throw new Error(`Failed to fetch business data: ${businessResponse.status}`);
-        }
-        const business = await businessResponse.json();
-        setBusinessData(business);
-      } else if (deliveryResponse.sender_id) {
-        const senderResponse = await fetch(`http://192.168.1.165:8000/customer/${deliveryResponse.sender_id}`);
-        if (!senderResponse.ok) {
-          throw new Error(`Failed to fetch sender data: ${senderResponse.status}`);
-        }
-        const sender = await senderResponse.json();
-        setSenderData(sender);
+      if (response.business_id) {
+        const businessResponse = await backendClient.get<Business>(`business/${response.business_id}`);
+        setBusinessData(businessResponse);
+      } else if (response.sender_id) {
+        const senderResponse = await backendClient.get<Sender>(`customer/${response.sender_id}`);
+        setSenderData(senderResponse);
       }
-
-      if (deliveryResponse.receipient_id) {
-        const recipientResponse = await fetch(`http://192.168.1.165:8000/customer/${deliveryResponse.receipient_id}`);
-        if (!recipientResponse.ok) {
-          throw new Error(`Failed to fetch recipient data: ${recipientResponse.status}`);
-        }
-        const recipient = await recipientResponse.json();
-        setRecipientData(recipient);
+      if (response.receipient_id) {
+        const recipientResponse = await backendClient.get<Recipient>(`customer/${response.receipient_id}`);
+        setRecipientData(recipientResponse);
       }
     } catch (err: any) {
       setError(err.message);
@@ -174,45 +164,81 @@ export default function Delivery() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.deliveryInfo}>
-        <Text style={styles.deliveryText}>ID: {marker.title}</Text>
-        <Text style={styles.deliveryText}>Status: {deliveryData.status}</Text>
-        {renderButtons(deliveryData)}   
-      </View>
-      <View style={styles.recipient}>
-        <Text style={styles.recipientText}>Recipient</Text>
-        <Text style={styles.recipientText}>Name: {recipientData?.first_name} {recipientData?.last_name}</Text>
-        <View style={styles.buttonView}>
-          <Button title="Contact" onPress={() => callContact(recipientData.phone_number)}/>
-          <View style={styles.buttonGap}></View>
-          <Button title="Navigate" onPress={() => navigateToAddress(recipientData.address)}/>
+      <View style={styles.section}> 
+        <Text style={styles.sectionTitle}>Delivery Info</Text>
+        <View style={styles.sectionContent}>
+          <View style={styles.columnContainer}> 
+            <View style={styles.column}>
+              <Text style={styles.deliveryText}>ID: {marker.title}</Text>
+              <Text style={styles.deliveryText}>Status: {deliveryData.status}</Text>
+            </View>
+            <View style={styles.column}>
+              {renderButtons(deliveryData)} 
+            </View>
+          </View>
         </View>
       </View>
-      {renderSender()}
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Recipient Info</Text>
+        <View style={styles.sectionContent}>
+          <Text style={styles.recipientText}>Name: {recipientData?.first_name} {recipientData?.last_name}</Text>
+          <View style={styles.buttonView}>
+            <Button color="#3daebf" title="Contact" onPress={() => callContact(recipientData.phone_number)}/>
+            <View style={styles.buttonGap}></View>
+            <Button color="#3daebf" title="Navigate" onPress={() => navigateToAddress(recipientData.address)}/>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Sender Info</Text>
+        <View style={styles.sectionContent}>
+          {renderSender()} 
+        </View>
+      </View>
     </View>
   );
 }
 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'flex-start',
-    flexDirection: "column",
     padding: 16,
+    backgroundColor: Colors.light.background,
   },
+  section: {
+    marginBottom: 20, // Add margin bottom for spacing
+    borderBottomWidth: 1, // Add a border for visual separation
+    borderBottomColor: '#ccc',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  sectionContent: {
+    padding: 15, // Increase padding for more space
+  },
+
   deliveryInfo: {
     flex: 1,
     justifyContent:"center",
+    borderColor: "black",
   },
   deliveryText: {
     fontSize: 20,
+    marginBottom: 5, // Add space between text elements
   },
-  sender: {
-    flex: 1,
-    justifyContent:"center",
+  deliveryButton: {
+    width: '50%', // Adjust button width as needed
+    alignSelf: 'center', // Center button within its container
   },
+
   senderText: {
     fontSize: 20,
+    marginBottom: 5, // Add space between text elements
   },
   recipient: {
     flex: 1,
@@ -220,6 +246,7 @@ const styles = StyleSheet.create({
   },
   recipientText: {
     fontSize: 20,
+    marginBottom: 5, // Add space between text elements
   },
   title: {
     fontSize: 40,
