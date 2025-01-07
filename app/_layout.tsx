@@ -4,13 +4,26 @@ export default function Layout() {
   return (
     <Stack
       screenOptions={{
-        headerShown: false,
+
       }}>
-      <Stack.Screen name="(login)" />
-      <Stack.Screen name="(tabs)"/>
-      <Stack.Screen name="delivery-map"/>
-      <Stack.Screen name="delivery"/>
-      <Stack.Screen name="delivery-action"/>
+      <Stack.Screen
+        name="(login)"
+        options={{ headerShown: false }} 
+      />
+      <Stack.Screen
+        name="delivery-map"
+        options={{ headerShown: false}} />
+      <Stack.Screen
+        name="delivery"
+        options={{
+          title: 'Marker Details',
+        }}
+      />
+      <Stack.Screen
+        name="delivery-action"
+        options={{ title: 'Packages'}}
+
+        />
     </Stack>
   );
 }

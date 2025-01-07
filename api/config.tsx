@@ -17,8 +17,6 @@ class BackendClient {
     public static getInstance(): BackendClient {
         if (!BackendClient.instance) {
             const endpoint = process.env.EXPO_PUBLIC_API_ENDPOINT;
-            console.log("endpoint");
-            console.log(endpoint);
             if (endpoint) {
                 BackendClient.instance = new BackendClient(endpoint);
             } else {
@@ -49,7 +47,7 @@ class BackendClient {
             const response = await this.client.post(endpoint, data);
             return response.data;            
         } catch (error) {
-            console.log(error)
+            console.error(error);
             throw error; // Re-throw for potential error handling in calling code
         }
     }

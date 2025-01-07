@@ -1,4 +1,4 @@
-import { useNavigation } from 'expo-router';
+import { useNavigation, useLocalSearchParams } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
 import  MapView, { Marker, Region } from 'react-native-maps';
 import React, { useEffect, useState } from 'react';
@@ -30,21 +30,25 @@ export default function DeliveryMap() {
   });
 
   const [markers, setMarkers] = useState<MarkerData[]>([]);
+  const [markerId, setMarkerId] = useState<number | null>(null); // To store the marker ID
+  const { markerIdParam } = useLocalSearchParams(); // Get marker ID from navigation params
+
 
   useEffect(() => {
-    navigation.setOptions({ headerShown: false });
+    setMarkerId(markerIdParam?.id); // Update state with marker ID from params
+
     const unsubscribe = navigation.addListener('focus', () => {
-      // Re-fetch delivery data when the screen is focused
+      // Re-fetch marker data when the screen is focused
       fetchMarkers();
     });
 
     return unsubscribe;
-  }, [navigation]);
+  }, [navigation, markerIdParam]);
 
   const fetchMarkers = async () => {
     try {
       const backendClient = BackendClient.getInstance();
-      const data = await backendClient.get('/deliveries');
+      const data = await backendClient.get<MarkerData[]>('/deliveries');
       const mappedMarkers = data.map((item: any) => ({
         latlng: {
           latitude: item.latitude,
@@ -71,6 +75,7 @@ export default function DeliveryMap() {
   const onMarkerCalloutPress = (marker: MarkerData) => {
     navigation.navigate("delivery", marker);
   }
+
   return (
     <View style={styles.container}>
       <MapView

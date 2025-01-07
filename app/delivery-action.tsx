@@ -74,27 +74,11 @@ export default function DeliveryAction() {
   const handleCompleteDelivery = async () => {
     try {
       const token = await SecureStore.getItemAsync("token");
-      console.log(token);
       const updatedDelivery: Delivery = {
         status: "completed",
       };
-      const backendClient = BackendClient.getInstance()
-      backendClient.put<Delivery, Delivery>(`/deliveries/${deliveryData.id}`, updatedDelivery )
-      const response = await fetch(`http://192.168.1.165:8000/deliveries/${deliveryData.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token,
-        },
-        body: JSON.stringify({
-          status: 'completed',
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to update delivery: ${response.status}`);
-      }
-
+      const backendClient = BackendClient.getInstance();
+      backendClient.put<Delivery, Delivery>(`/deliveries/${deliveryData.id}`, updatedDelivery);
       navigation.goBack();
     } catch (err: any) {
       console.error(err.message);

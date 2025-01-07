@@ -111,6 +111,22 @@ export default function Delivery() {
   };
 
   useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      // Perform your actions here (e.g., save data)
+      navigation.setParams(marker.id);
+
+      // If you want to prevent the default back behavior:
+      // e.preventDefault(); 
+
+      // Optionally, navigate to a different screen instead of going back:
+      // navigation.navigate('OtherScreen'); 
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
+
+  useEffect(() => {
     // Make the API call
     if (!marker.id) {
       setError('Marker ID is missing');
@@ -120,7 +136,6 @@ export default function Delivery() {
   }, [marker.id]);
 
   const callContact = (phoneNumber: string) => {
-    console.log(phoneNumber);
     if (!phoneNumber) {
       alert("No phone number found.")
       return;
